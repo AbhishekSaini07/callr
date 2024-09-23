@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Callr - One-to-One Meetings & Screen Recording</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/stylesheets/home.css" rel="stylesheet">
+    <style>
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+        }
+
+        #cameraVideo {
+            width: 88%;
+            height: auto;
+        }
+
+        .recording {
+            width: 100%;
+            height: auto;
+        }
+
+        .container-box {
+            padding: 30px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .back-arrow {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        /* Canvas for audio visualizations */
+
+
+        canvas {
+            width: 94%;
+            height: 60px;
+        }
+    </style>
+</head>
+
+<body class="bg-light">
+
+    <div class="container py-5">
+        <div class="container-box position-relative">
+
+
+            <span class="back-arrow" onclick="handleBackClick()">&#8592; Back</span>
+            <!-- Modal -->
+            <div id="cameraModal" class="modal">
+                <div class="modal-content">
+                    <h2>Select Camera and Microphone</h2>
+                    <label for="cameraSelect">Camera:</label>
+                    <select id="cameraSelect"></select>
+                    <br />
+                    <label for="microphoneSelect">Microphone:</label>
+                    <select id="microphoneSelect"></select>
+                    <br />
+                    <button id="includeCamera">Start with Camera</button>
+                    <button id="excludeCamera">Start without Camera</button>
+                </div>
+            </div>
+
+            <!-- Recording Section -->
+            <div class="container">
+                <section class="py-5" id="rec_off">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <button class="start-btn btn btn-success mb-3 w-100">Start Recording</button>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-12">
+                                    <h2 class="text-center mb-5">Steps to Record and Download</h2>
+                                    <div class="accordion" id="faqAccordion">
+                                        <div class="accordion-item">
+                                            <h3 class="accordion-header" id="headingOne">
+                                                <button class="accordion-button" type="button" data-bs-toggle="collapse"
+                                                    data-bs-target="#collapseOne" aria-expanded="true"
+                                                    aria-controls="collapseOne">
+                                                    How do I record a session?
+                                                </button>
+                                            </h3>
+                                            <div id="collapseOne" class="accordion-collapse collapse show"
+                                                aria-labelledby="headingOne" data-bs-parent="#faqAccordion">
+                                                <div class="accordion-body">
+                                                    To start recording, click on the "Start Recording" button. Select
+                                                    your microphone and camera, give necessary permissions, and then
+                                                    continue with your recording. Once done, click the "Stop Recording"
+                                                    button, and you'll see your recorded video, which you can download
+                                                    by clicking the download option.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-md-4" id="recList">
+                            Recordings
+                            <ul id="recordings-list"></ul>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="py-5" id="rec_on" style="display: none;">
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="row">
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <h5>Media Input</h5>
+                                        <canvas id="screenAudioVisualizer"></canvas>
+                                    </div>
+                                </div>
+                                <div class="row">
+                                    <div class="col-md-12">
+                                        <h5>Microphone Input</h5>
+                                        <canvas id="micAudioVisualizer"></canvas>
+                                    </div>
+                                </div>
+                                <div class="row"></div>
+                                <div class="col-md-12">
+                                    <h5>camera Input</h5>
+                                    <video id="cameraVideo" autoplay muted controls style="display: none;"></video>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <div class="col-md-8">
+                            <h5>Screen Input</h5>
+                            <video class="recording" autoplay muted controls style="display: none;"></video>
+                        </div>
+                    </div>
+
+                    <!-- Two separate canvases for microphone and screen audio -->
+                    <!-- Audio Visualizers -->
+
+
+
+                    <div class="row">
+                        <div class="col-md-12">
+                            <button class="stop-btn btn btn-danger mb-3 w-100">Stop Recording</button>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Function to check if recording is active
+        function isRecording() {
+            const recOnSection = document.getElementById("rec_on");
+            return recOnSection.style.display === "block"; // Check if rec_on is displayed
+        }
+    
+        // Function to handle back arrow click
+        function handleBackClick() {
+            if (isRecording()) {
+                const confirmExit = confirm("Going back will stop the recording. Are you sure you want to proceed?");
+                if (confirmExit) {
+                    stopRecording(); // Ensure to stop the recording if they confirm
+                    history.back(); // Go back in history
+                }
+            } else {
+                history.back(); // Go back without confirmation if not recording
+            }
+        }
+    </script>
+    <script src="javascripts/rec.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+
+</html>
